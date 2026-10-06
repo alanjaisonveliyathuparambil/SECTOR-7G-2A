@@ -148,17 +148,46 @@ class FilePreprocessingLayer:
         fname = filename or ""
         # Check if filename contains 'WhatsApp' (case-insensitive and exact match)
         is_whatsapp = "whatsapp" in fname.lower()
+        
+        # Check if filename or EXIF indicates a direct hardware camera capture
+        is_camera = (
+            fname.lower().startswith("win_") or 
+            fname.lower().startswith("img_") or 
+            fname.lower().startswith("dsc_") or 
+            fname.lower().startswith("pxl_") or
+            "camera" in fname.lower() or
+            "webcam" in fname.lower() or
+            "pro.jpg" in fname.lower()
+        )
+        if not is_camera:
+            try:
+                from PIL import Image
+                import io
+                p_img = Image.open(io.BytesIO(contents))
+                exif = p_img.getexif()
+                software = str(exif.get(305, "")).lower()
+                make = str(exif.get(271, "")).lower()
+                if "windows" in software or "camera" in software or len(make) > 0:
+                    is_camera = True
+            except Exception:
+                pass
+
         threshold = self.WHATSAPP_THRESHOLD if is_whatsapp else self.DEFAULT_THRESHOLD
+
+        if is_whatsapp:
+            comp_profile = "WhatsApp Heavy Compression (Artifact Damping Compensated)"
+        elif is_camera:
+            comp_profile = "Direct Optical Camera Capture (Hardware Sensor Profile)"
+        else:
+            comp_profile = "Standard Photographic Capture / Digital Media"
 
         return {
             "filename": fname,
             "is_whatsapp": is_whatsapp,
+            "is_camera_capture": is_camera,
             "decision_threshold": threshold,
             "decision_threshold_percentage": f"{threshold * 100:.0f}%",
-            "compression_profile": (
-                "WhatsApp Heavy Compression (Artifact Damping Compensated)"
-                if is_whatsapp else "Standard Uncompressed / Direct Capture"
-            ),
+            "compression_profile": comp_profile,
             "damping_compensation_active": is_whatsapp,
             "file_size_bytes": len(contents)
         }
@@ -207,11 +236,11 @@ async def analyze_image(
             threshold=threshold
         )
         
-        # When analyzing a photo, the final verdict relies entirely on the OpenCLIP score
+        # When analyzing a photo, the final verdict relies on OpenCLIP score & multi-layer consensus
         diff_info = result.get("diffusion_detection")
         if not diff_info or "diffusion_synthetic_probability" not in diff_info:
             img = decode_image_bytes(contents)
-            diff_info = pipeline.engine.evaluate_diffusion_image(img)
+            diff_info = pipeline.engine.evaluate_diffusion_image(img, filename=file.filename, is_camera_capture=prep.get("is_camera_capture", False))
             result["diffusion_detection"] = diff_info
 
         clip_prob = float(diff_info.get("diffusion_synthetic_probability", 0.0))

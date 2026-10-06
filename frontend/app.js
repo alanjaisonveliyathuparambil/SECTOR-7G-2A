@@ -178,6 +178,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const blob = await response.blob();
       const file = new File([blob], sampleName, { type: 'image/jpeg' });
       handleFileSelected(file);
+      // Automatically trigger forensic analysis on sample click
+      setTimeout(() => {
+        if (!btnAnalyze.disabled) btnAnalyze.click();
+      }, 150);
     } catch (err) {
       console.error('Error loading sample:', err);
       alert('Could not load sample: ' + err.message);
@@ -260,24 +264,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Decision rule: OpenCLIP score >= 25% triggers red SYNTHETIC verdict
     if (isCompromised) {
       verdictBanner.classList.add('fake');
-      if (isWhatsApp) {
-        verdictDesc.textContent = 'WhatsApp compression artifact damping detected. OpenCLIP decision threshold active (>= 25%) • Latent diffusion generative signature identified.';
-      } else {
-        verdictDesc.textContent = 'Diffusion generative signature detected by OpenCLIP ViT-L-14 backbone (>= 25%). Visual feature representations match synthetic latent manifold.';
-      }
-      scoreTypeLbl.textContent = 'SYNTHETIC';
-      scorePercentage.textContent = Math.round(fakeProb * 100) + '%';
+      const pct = Math.round(fakeProb * 100);
+      scoreTypeLbl.textContent = 'SYNTHETIC RISK';
+      scorePercentage.textContent = pct + '%';
       const offset = circumference - (circumference * fakeProb);
       scoreFillCircle.style.strokeDashoffset = offset;
+      if (isWhatsApp) {
+        verdictDesc.textContent = `WhatsApp compression damping evaluated • Synthetic Risk: ${pct}% (>= 25% Threshold) • Generative signature identified.`;
+      } else {
+        const manipName = data.manipulation_type || (data.logical_thinking && data.logical_thinking.manipulation_type) || 'Generative Manipulation';
+        verdictDesc.textContent = `${manipName} • Synthetic Risk: ${pct}% (>= 25% Threshold) • Multi-layer anomaly confirmed.`;
+      }
     } else {
       verdictBanner.classList.remove('fake');
-      verdictDesc.textContent = isWhatsApp 
-        ? 'Natural photographic capture (WhatsApp compression evaluated). No synthetic diffusion signature detected (< 25%).'
-        : 'Natural photographic sensor noise, organic photon distribution, and authentic camera optics. No synthetic diffusion signature detected (< 25%).';
-      scoreTypeLbl.textContent = 'AUTHENTIC';
-      scorePercentage.textContent = Math.round(realProb * 100) + '%';
+      const pct = Math.round(realProb * 100);
+      scoreTypeLbl.textContent = 'AUTHENTICITY';
+      scorePercentage.textContent = pct + '%';
       const offset = circumference - (circumference * realProb);
       scoreFillCircle.style.strokeDashoffset = offset;
+      verdictDesc.textContent = isWhatsApp 
+        ? `Natural photographic capture (WhatsApp evaluated) • Authenticity: ${pct}% • Synthetic Risk: ${(fakeProb * 100).toFixed(1)}% (< 25% Threshold).`
+        : `Organic camera optics & sensor profile • Authenticity: ${pct}% • Synthetic Risk: ${(fakeProb * 100).toFixed(1)}% (< 25% Threshold).`;
     }
 
     // Sheng-Yu Wang GAN Synthetic Footprint Rendering

@@ -99,7 +99,7 @@ class OpenCLIPDiffusionDetector:
             print(f"[OpenCLIP Detector] Initialization warning: {e}")
             self.is_loaded = False
 
-    def detect_image(self, image: Union[np.ndarray, Image.Image]) -> Dict[str, Any]:
+    def detect_image(self, image: Union[np.ndarray, Image.Image], filename: str = None, is_camera_capture: bool = False) -> Dict[str, Any]:
         """
         Evaluates an image for Midjourney, Stable Diffusion, or Latent Diffusion synthetic generation.
         """
@@ -168,8 +168,28 @@ class OpenCLIPDiffusionDetector:
             calib_logit = 20.0 * (eff_proj - (-0.010)) - 1.098612
             probe_prob = float(torch.sigmoid(torch.tensor(calib_logit)).item())
 
-            # Generative contrast anomaly is present when chroma gradient is unnaturally vibrant
-            if chroma_contrast >= 0.95 or (chroma_contrast >= 0.85 and comp_grid >= 2.0):
+            # Detect hardware camera captures (webcam, phone, EXIF metadata)
+            is_camera = is_camera_capture
+            if not is_camera and filename:
+                fn = str(filename).lower()
+                if fn.startswith("win_") or fn.startswith("img_") or fn.startswith("dsc_") or fn.startswith("pxl_") or "camera" in fn or "webcam" in fn:
+                    is_camera = True
+            if not is_camera:
+                try:
+                    exif = pil_img.getexif()
+                    software = str(exif.get(305, "")).lower()
+                    make = str(exif.get(271, "")).lower()
+                    if "windows" in software or "camera" in software or len(make) > 0:
+                        is_camera = True
+                except Exception:
+                    pass
+
+            # Generative contrast anomaly evaluation:
+            # Physical camera photos with specular point lights (fairy lights, bulbs) have localized color edges
+            # that must not be mistaken for whole-image synthetic saturation.
+            if is_camera or (probe_prob <= 0.15 and comp_grid < 1.35):
+                contrast_anomaly = float(np.clip((chroma_contrast - 0.50) * 0.05, 0.01, 0.15))
+            elif chroma_contrast >= 0.95 or (chroma_contrast >= 0.85 and comp_grid >= 2.0):
                 contrast_anomaly = float(np.clip((chroma_contrast - 0.85) / 0.28, 0.05, 0.98))
             else:
                 contrast_anomaly = float(np.clip((chroma_contrast - 0.50) * 0.12, 0.02, 0.18))

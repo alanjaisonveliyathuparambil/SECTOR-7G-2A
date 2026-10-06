@@ -45,6 +45,20 @@ class FaceDetector:
             })
             return results
 
+        # Filter spurious background detections (e.g. wall pillars, light fixtures)
+        eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
+        valid_faces = []
+        for (x, y, bw, bh) in faces:
+            if min(bw, bh) < 100 and not eye_cascade.empty():
+                roi_gray = gray[y:y+bh, x:x+bw]
+                eyes = eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.1, minNeighbors=2)
+                if len(eyes) == 0:
+                    continue
+            valid_faces.append((x, y, bw, bh))
+
+        if len(valid_faces) > 0:
+            faces = valid_faces
+
         for (x, y, bw, bh) in faces:
             # Pad bounding box by scale_factor (standard DFDC/FF++ practice)
             center_x, center_y = x + bw // 2, y + bh // 2

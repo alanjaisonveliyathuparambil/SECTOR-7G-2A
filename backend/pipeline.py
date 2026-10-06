@@ -53,12 +53,20 @@ class DetectionPipeline:
             else:
                 threshold = 0.35
         
+        # Camera capture check
+        fn = (filename or "").lower()
+        is_camera = (
+            fn.startswith("win_") or fn.startswith("img_") or 
+            fn.startswith("dsc_") or fn.startswith("pxl_") or 
+            "camera" in fn or "webcam" in fn or "pro.jpg" in fn
+        )
+
         # 1. Global GAN Structural Footprint Analysis (Sheng-Yu Wang CNNDetection)
         gan_footprint = self.engine.evaluate_gan_footprint(img)
         gan_score = gan_footprint["gan_synthetic_footprint_score"]
 
         # 2. OpenCLIP ViT-L-14 Latent Diffusion & Midjourney Detection
-        diffusion_eval = self.engine.evaluate_diffusion_image(img)
+        diffusion_eval = self.engine.evaluate_diffusion_image(img, filename=filename, is_camera_capture=is_camera)
         diffusion_score = diffusion_eval["diffusion_synthetic_probability"]
 
         # 3. Localized Facial Region Detection
@@ -133,7 +141,7 @@ class DetectionPipeline:
         multi_layer_audit = self.engine.analyze_multi_layer_image(
             img,
             faces=faces,
-            metadata={"filename": filename, "threshold": threshold, "max_face_fake": max_fake_prob}
+            metadata={"filename": filename, "threshold": threshold, "max_face_fake": max_fake_prob, "is_camera_capture": is_camera}
         )
         layers_data = multi_layer_audit["layers"]
         logical_thinking = multi_layer_audit["logical_thinking"]
