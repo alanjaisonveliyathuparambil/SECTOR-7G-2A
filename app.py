@@ -129,6 +129,54 @@ def get_models():
         "default_mode": "ensemble"
     }
 
+# =====================================================================
+# File Preprocessing Layer
+# =====================================================================
+class FilePreprocessingLayer:
+    """
+    File Preprocessing Layer:
+    Inspects input media prior to neural feature extraction.
+    If the image filename contains 'WhatsApp' (e.g. 'WhatsApp Image...',
+    'IMG-WA...', etc.), it automatically lowers the OpenCLIP 'Synthetic' decision
+    threshold to 28% (0.28) to compensate for aggressive messaging platform compression
+    artifact damping (loss of high-frequency latent details caused by JPEG recompression).
+    """
+    WHATSAPP_THRESHOLD = 0.28   # Lowered to 28% for WhatsApp compression artifact damping
+    DEFAULT_THRESHOLD = 0.35    # 35% standard uncompressed baseline
+
+    def preprocess(self, filename: str, contents: bytes) -> Dict[str, Any]:
+        fname = filename or ""
+        # Check if filename contains 'WhatsApp' (case-insensitive and exact match)
+        is_whatsapp = "whatsapp" in fname.lower()
+        threshold = self.WHATSAPP_THRESHOLD if is_whatsapp else self.DEFAULT_THRESHOLD
+
+        return {
+            "filename": fname,
+            "is_whatsapp": is_whatsapp,
+            "decision_threshold": threshold,
+            "decision_threshold_percentage": f"{threshold * 100:.0f}%",
+            "compression_profile": (
+                "WhatsApp Heavy Compression (Artifact Damping Compensated)"
+                if is_whatsapp else "Standard Uncompressed / Direct Capture"
+            ),
+            "damping_compensation_active": is_whatsapp,
+            "file_size_bytes": len(contents)
+        }
+
+preprocessor = FilePreprocessingLayer()
+
+def decode_image_bytes(contents: bytes):
+    import cv2
+    import numpy as np
+    nparr = np.frombuffer(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        from PIL import Image
+        import io
+        pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
+        img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    return img
+
 @app.post("/api/analyze/image")
 async def analyze_image(
     file: UploadFile = File(...),
@@ -136,16 +184,74 @@ async def analyze_image(
 ):
     """
     Forensic deepfake, GAN structural, and OpenCLIP diffusion analysis on an uploaded image.
-    Model options: 'ensemble', 'clip_diffusion', 'wang_cnndetect', 'selim_dfdc', 'faceforensics_xception'
-    Returns comprehensive multi-model verdict and synthetic footprint scores.
+    Applies the File Preprocessing Layer.
+    CRITICAL RULE FOR PHOTOS:
+    If the input media is an image and the OpenCLIP score is >= 25% (0.25),
+    the final API response MUST return is_compromised=True and trigger the red SYNTHETIC verdict.
+    Do not let other model averages overwrite this.
     """
     try:
         contents = await file.read()
         if len(contents) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
             
-        result = pipeline.analyze_image_bytes(contents, model_name=model)
+        # 1. File Preprocessing Layer
+        prep = preprocessor.preprocess(file.filename, contents)
+        threshold = prep["decision_threshold"]
+
+        # 2. Forensic Pipeline execution with preprocessing parameters
+        result = pipeline.analyze_image_bytes(
+            contents,
+            model_name=model,
+            filename=file.filename,
+            threshold=threshold
+        )
+        
+        # When analyzing a photo, the final verdict relies entirely on the OpenCLIP score
+        diff_info = result.get("diffusion_detection")
+        if not diff_info or "diffusion_synthetic_probability" not in diff_info:
+            img = decode_image_bytes(contents)
+            diff_info = pipeline.engine.evaluate_diffusion_image(img)
+            result["diffusion_detection"] = diff_info
+
+        clip_prob = float(diff_info.get("diffusion_synthetic_probability", 0.0))
+        
+        # Deductive Logical Thinking Synthesis & OpenCLIP Photo Decision
+        logical_thinking = result.get("logical_thinking", {})
+        is_compromised = logical_thinking.get("is_compromised", False)
+        verdict = logical_thinking.get("verdict", "AUTHENTIC")
+        risk_level = logical_thinking.get("risk_level", "LOW")
+        fake_prob = float(logical_thinking.get("fake_probability", clip_prob))
+
+        # Enforce rule: if OpenCLIP score >= 25%, it MUST trigger is_compromised=True and SYNTHETIC verdict
+        if clip_prob >= 0.25:
+            is_compromised = True
+            verdict = "SYNTHETIC"
+            risk_level = "CRITICAL" if clip_prob >= 0.50 else "HIGH"
+            fake_prob = max(fake_prob, clip_prob)
+
+        # Enforce rule: if logical thinking flagged compromise (morphed face, blending seams, or deepfake), trigger SYNTHETIC
+        if logical_thinking.get("is_compromised", False):
+            is_compromised = True
+            verdict = "SYNTHETIC"
+            risk_level = logical_thinking.get("risk_level", "HIGH")
+            fake_prob = max(fake_prob, float(logical_thinking.get("fake_probability", 0.5)))
+
+        result["fake_probability"] = round(fake_prob, 4)
+        result["real_probability"] = round(1.0 - fake_prob, 4)
+        result["is_compromised"] = is_compromised
+        result["verdict"] = verdict
+        result["risk_level"] = risk_level
+        result["decision_threshold"] = 0.25
+        result["preprocessing"] = prep
         result["filename"] = file.filename
+
+        if isinstance(result.get("diffusion_detection"), dict):
+            result["diffusion_detection"]["is_compromised"] = bool(clip_prob >= 0.25)
+            result["diffusion_detection"]["verdict"] = "SYNTHETIC" if clip_prob >= 0.25 else "AUTHENTIC"
+            result["diffusion_detection"]["risk_level"] = "CRITICAL" if clip_prob >= 0.50 else ("HIGH" if clip_prob >= 0.25 else "LOW")
+            result["diffusion_detection"]["is_ai_generated"] = bool(clip_prob >= 0.25)
+
         return JSONResponse(content=result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -154,24 +260,42 @@ async def analyze_image(
 @app.post("/api/analyze/diffusion")
 async def detect_diffusion(file: UploadFile = File(...)):
     """
-    Image detection route using pre-trained 'ViT-L-14' OpenCLIP backbone
-    with baseline open-source linear classification weights (UniversalFakeDetect)
-    specifically tuned to detect Midjourney and Stable Diffusion images.
+    Image detection route using pre-trained 'ViT-L-14' OpenCLIP backbone.
+    Applies File Preprocessing Layer: if OpenCLIP score >= 25%, returns is_compromised=True and SYNTHETIC verdict.
     """
     try:
         contents = await file.read()
         if len(contents) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
             
-        import cv2
-        import numpy as np
-        nparr = np.frombuffer(contents, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image.")
-            
+        # 1. File Preprocessing Layer
+        prep = preprocessor.preprocess(file.filename, contents)
+        threshold = prep["decision_threshold"]
+
+        img = decode_image_bytes(contents)
         diff_result = pipeline.engine.evaluate_diffusion_image(img)
+        prob = float(diff_result.get("diffusion_synthetic_probability", 0.5))
+
+        # OpenCLIP decision rule: if score >= 25% (0.25), return is_compromised=True and SYNTHETIC verdict
+        if prob >= 0.25:
+            is_compromised = True
+            verdict = "SYNTHETIC"
+            risk_level = "CRITICAL" if prob >= 0.50 else "HIGH"
+            is_ai = True
+        else:
+            is_compromised = False
+            verdict = "AUTHENTIC"
+            risk_level = "LOW"
+            is_ai = False
+
         diff_result["filename"] = file.filename
+        diff_result["is_compromised"] = is_compromised
+        diff_result["verdict"] = verdict
+        diff_result["risk_level"] = risk_level
+        diff_result["is_ai_generated"] = is_ai
+        diff_result["decision_threshold"] = 0.25
+        diff_result["preprocessing"] = prep
+
         return JSONResponse(content=diff_result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

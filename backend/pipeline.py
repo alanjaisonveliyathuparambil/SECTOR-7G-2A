@@ -20,7 +20,13 @@ class DetectionPipeline:
             return ""
         return "data:image/jpeg;base64," + base64.b64encode(buffer).decode('utf-8')
 
-    def analyze_image_bytes(self, image_bytes: bytes, model_name: str = "ensemble") -> Dict[str, Any]:
+    def analyze_image_bytes(
+        self,
+        image_bytes: bytes,
+        model_name: str = "ensemble",
+        filename: str = None,
+        threshold: float = None
+    ) -> Dict[str, Any]:
         """
         Analyzes an uploaded image:
         - Evaluates global static image for GAN structural artifacts (Wang CNNDetection)
@@ -30,9 +36,22 @@ class DetectionPipeline:
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img is None:
-            raise ValueError("Failed to decode uploaded image file.")
+            try:
+                from PIL import Image
+                import io
+                pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+            except Exception:
+                raise ValueError("Failed to decode uploaded image file.")
 
         h, w = img.shape[:2]
+        
+        # Decision threshold (28% for WhatsApp compression damping, 35% standard)
+        if threshold is None:
+            if filename and "whatsapp" in filename.lower():
+                threshold = 0.28
+            else:
+                threshold = 0.35
         
         # 1. Global GAN Structural Footprint Analysis (Sheng-Yu Wang CNNDetection)
         gan_footprint = self.engine.evaluate_gan_footprint(img)
@@ -50,6 +69,16 @@ class DetectionPipeline:
         max_fake_prob = 0.0
         all_signals = []
 
+        # Decision threshold: if the input is a photo, the final verdict relies entirely on OpenCLIP score
+        if model_name in ["ensemble", "clip_diffusion", "photo"] or model_name is None:
+            overall_fake = diffusion_score
+        elif model_name == "wang_cnndetect":
+            overall_fake = gan_score
+        else:
+            overall_fake = diffusion_score
+
+        overall_fake = float(np.clip(overall_fake, 0.01, 0.99))
+
         for idx, face_item in enumerate(faces):
             crop = face_item["crop"]
             res = self.engine.predict_crop(crop, model_name=model_name)
@@ -61,15 +90,14 @@ class DetectionPipeline:
             bbox = face_item["bbox"]
             bx, by, bw, bh = bbox
             
-            if fake_prob >= 0.70:
+            # Use 25% threshold for flagging synthetic features in photos
+            display_prob = max(fake_prob, overall_fake)
+            if display_prob >= 0.25:
                 color = (40, 40, 240)    # BGR Red
-                label = f"FAKE #{idx+1}: {fake_prob*100:.1f}%"
-            elif fake_prob >= 0.45:
-                color = (0, 165, 255)    # BGR Amber
-                label = f"SUSP #{idx+1}: {fake_prob*100:.1f}%"
+                label = f"SYNTHETIC #{idx+1}: {display_prob*100:.1f}%"
             else:
                 color = (230, 200, 20)   # BGR Cyan / Greenish
-                label = f"REAL #{idx+1}: {res['real_probability']*100:.1f}%"
+                label = f"AUTHENTIC #{idx+1}: {(1.0 - display_prob)*100:.1f}%"
 
             # Draw futuristic HUD corners and bounding box
             cv2.rectangle(annotated, (bx, by), (bx + bw, by + bh), color, 2)
@@ -101,29 +129,20 @@ class DetectionPipeline:
                 "crop_preview": self._to_base64(crop, quality=80)
             })
 
-        # Overall synthesis likelihood: combines localized face score, GAN footprint, and Diffusion detector
-        if model_name == "wang_cnndetect":
-            overall_fake = gan_score
-        elif model_name == "clip_diffusion":
-            overall_fake = diffusion_score
-        elif len(faces) == 0:
-            # For non-face or landscape/AI art images, fuse GAN and Diffusion scores
-            overall_fake = 0.60 * diffusion_score + 0.40 * gan_score
-        else:
-            # Multi-modal consensus across faces, GAN footprints, and Diffusion signatures
-            overall_fake = max(max_fake_prob, 0.55 * max_fake_prob + 0.25 * diffusion_score + 0.20 * gan_score)
-            
-        overall_fake = float(np.clip(overall_fake, 0.01, 0.99))
+        # 4. Multi-Layer Image Feature Decomposition & Deductive Logical Thinking Audit
+        multi_layer_audit = self.engine.analyze_multi_layer_image(
+            img,
+            faces=faces,
+            metadata={"filename": filename, "threshold": threshold, "max_face_fake": max_fake_prob}
+        )
+        layers_data = multi_layer_audit["layers"]
+        logical_thinking = multi_layer_audit["logical_thinking"]
 
-        if overall_fake >= 0.70:
-            overall_verdict = "DEEPFAKE / AI-GENERATED"
-            overall_risk = "CRITICAL"
-        elif overall_fake >= 0.45:
-            overall_verdict = "SUSPICIOUS MANIPULATION"
-            overall_risk = "MODERATE"
-        else:
-            overall_verdict = "VERIFIED AUTHENTIC"
-            overall_risk = "LOW"
+        overall_fake = logical_thinking["fake_probability"]
+        is_compromised = logical_thinking["is_compromised"]
+        overall_verdict = logical_thinking["verdict"]
+        overall_risk = logical_thinking["risk_level"]
+        manipulation_type = logical_thinking["manipulation_type"]
 
         avg_signals = {}
         if all_signals:
@@ -144,11 +163,16 @@ class DetectionPipeline:
             "faces_detected": len(faces),
             "fake_probability": round(overall_fake, 4),
             "real_probability": round(1.0 - overall_fake, 4),
+            "is_compromised": is_compromised,
+            "decision_threshold": 0.25,
+            "verdict": overall_verdict,
+            "risk_level": overall_risk,
+            "manipulation_type": manipulation_type,
+            "layers": layers_data,
+            "logical_thinking": logical_thinking,
             "gan_synthetic_footprint_score": gan_score,
             "gan_footprint": gan_footprint,
             "diffusion_detection": diffusion_eval,
-            "verdict": overall_verdict,
-            "risk_level": overall_risk,
             "faces": face_results,
             "aggregate_signals": avg_signals,
             "annotated_image": self._to_base64(annotated, quality=85)

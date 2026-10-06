@@ -163,11 +163,19 @@
           <div class="preset-btns">
             <button class="sample-chip" id="sample-authentic" data-file="authentic_portrait.jpg">
               <span class="chip-dot authentic"></span>
-              Authentic Portrait Sample
+              Authentic Portrait
+            </button>
+            <button class="sample-chip" id="sample-morphed" data-file="morphed_face_sample.jpg">
+              <span class="chip-dot" style="background: #f59e0b;"></span>
+              Morphed Face Sample
+            </button>
+            <button class="sample-chip" id="sample-ai" data-file="ai_generated_portrait.jpg">
+              <span class="chip-dot" style="background: #a855f7;"></span>
+              AI Generated Image
             </button>
             <button class="sample-chip" id="sample-fake" data-file="deepfake_synthetic_face.jpg">
               <span class="chip-dot fake"></span>
-              Synthetic Deepfake Sample
+              Synthetic Deepfake
             </button>
           </div>
         </div>
@@ -277,6 +285,117 @@
                 <span class="diffusion-score-number" id="metric-diffusion-prob">0.0%</span>
               </div>
               <p class="diffusion-card-desc" id="diffusion-desc">Visual embeddings reflect natural camera optics and photon distribution. No diffusion synthesis signature detected.</p>
+            </div>
+          </div>
+
+          <!-- Logical Forensic Thinking & 4-Layer Decomposition Engine -->
+          <div class="logical-thinking-card" id="logical-thinking-card">
+            <div class="logical-card-header">
+              <div class="logical-title-group">
+                <span class="logical-badge">DEDUCTIVE REASONING ENGINE</span>
+                <h3 class="logical-card-title">4-Layer Forensic Extraction &amp; Logical Thinking</h3>
+              </div>
+              <div class="logical-status-pill" id="logical-status-pill">SYNTHESIS COMPLETE</div>
+            </div>
+
+            <!-- Archetype Banner -->
+            <div class="archetype-banner" id="archetype-banner">
+              <span class="archetype-label">CLASSIFIED MANIPULATION ARCHETYPE:</span>
+              <span class="archetype-val" id="archetype-val">Authentic Optical Capture</span>
+            </div>
+
+            <!-- 4 Specialized Forensic Layers Grid -->
+            <div class="forensic-layers-grid">
+              <!-- Layer 1: Selim Seferbekov -->
+              <div class="layer-item" id="layer-selim-item">
+                <div class="layer-item-top">
+                  <span class="layer-num">LAYER 1</span>
+                  <span class="layer-status-tag" id="layer1-status-tag">PASS</span>
+                </div>
+                <div class="layer-model-title">Selim Seferbekov &bull; DFDC Winner</div>
+                <div class="layer-target-desc">Spatial face-boundary artifacts &amp; skin texturing blending seams [selimsef/dfdc]</div>
+                <div class="layer-score-bar-wrap">
+                  <div class="layer-score-fill" id="layer1-score-fill" style="width: 8%"></div>
+                </div>
+                <div class="layer-metric-row">
+                  <span class="layer-metric-lbl">Boundary Seam Score:</span>
+                  <span class="layer-metric-val" id="layer1-score-val">7.8%</span>
+                </div>
+                <p class="layer-detail-text" id="layer1-detail-text">Seamless facial contour transitions and organic skin micro-texture continuity verified.</p>
+              </div>
+
+              <!-- Layer 2: FaceForensics++ Xception Net -->
+              <div class="layer-item" id="layer-xception-item">
+                <div class="layer-item-top">
+                  <span class="layer-num">LAYER 2</span>
+                  <span class="layer-status-tag" id="layer2-status-tag">PASS</span>
+                </div>
+                <div class="layer-model-title">FaceForensics++ &bull; Xception Net</div>
+                <div class="layer-target-desc">Depthwise separable compression matrices &amp; specific tampering styles</div>
+                <div class="layer-score-bar-wrap">
+                  <div class="layer-score-fill" id="layer2-score-fill" style="width: 2%"></div>
+                </div>
+                <div class="layer-metric-row">
+                  <span class="layer-metric-lbl">Tampering Residual:</span>
+                  <span class="layer-metric-val" id="layer2-score-val">2.0%</span>
+                </div>
+                <p class="layer-detail-text" id="layer2-detail-text">Homogeneous depthwise separable compression matrices across blocks.</p>
+              </div>
+
+              <!-- Layer 3: Sheng-Yu Wang CNNDetection -->
+              <div class="layer-item" id="layer-wang-item">
+                <div class="layer-item-top">
+                  <span class="layer-num">LAYER 3</span>
+                  <span class="layer-status-tag" id="layer3-status-tag">PASS</span>
+                </div>
+                <div class="layer-model-title">Sheng-Yu Wang &bull; CNNDetection</div>
+                <div class="layer-target-desc">High-frequency upsampling patterns (periodic checkerboard noise) [PeterWang512]</div>
+                <div class="layer-score-bar-wrap">
+                  <div class="layer-score-fill" id="layer3-score-fill" style="width: 5%"></div>
+                </div>
+                <div class="layer-metric-row">
+                  <span class="layer-metric-lbl">Checkerboard Grid Score:</span>
+                  <span class="layer-metric-val" id="layer3-score-val">5.0%</span>
+                </div>
+                <p class="layer-detail-text" id="layer3-detail-text">Natural radial 1/f frequency decay. Absence of periodic checkerboard lattice spikes.</p>
+              </div>
+
+              <!-- Layer 4: OpenCLIP ViT-L-14 -->
+              <div class="layer-item" id="layer-clip-item">
+                <div class="layer-item-top">
+                  <span class="layer-num">LAYER 4</span>
+                  <span class="layer-status-tag" id="layer4-status-tag">PASS</span>
+                </div>
+                <div class="layer-model-title">OpenCLIP ViT-L-14 &bull; Diffusion Probe</div>
+                <div class="layer-target-desc">High-level semantic anomalies &amp; synthetic contrast distributions</div>
+                <div class="layer-score-bar-wrap">
+                  <div class="layer-score-fill" id="layer4-score-fill" style="width: 7%"></div>
+                </div>
+                <div class="layer-metric-row">
+                  <span class="layer-metric-lbl">Diffusion Manifold Score:</span>
+                  <span class="layer-metric-val" id="layer4-score-val">7.8%</span>
+                </div>
+                <p class="layer-detail-text" id="layer4-detail-text">Visual feature representations align with authentic camera photon dynamics.</p>
+              </div>
+            </div>
+
+            <!-- Chain of Thought Reasoning Terminal -->
+            <div class="cot-terminal">
+              <div class="cot-header">
+                <div class="cot-dots">
+                  <span class="cot-dot red"></span>
+                  <span class="cot-dot yellow"></span>
+                  <span class="cot-dot green"></span>
+                </div>
+                <span class="cot-title">DEDUCTIVE CHAIN-OF-LOGIC AUDIT TRACE</span>
+              </div>
+              <div class="cot-steps" id="cot-steps-container">
+                <!-- Injected via JavaScript -->
+              </div>
+              <div class="cot-deduction-footer">
+                <div class="cot-conclusion-title">FINAL LOGICAL DEDUCTION:</div>
+                <div class="cot-conclusion-text" id="cot-conclusion-text">Awaiting audit execution...</div>
+              </div>
             </div>
           </div>
 
