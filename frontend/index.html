@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TruthLock AI | Deepfake & GAN Forensic Detection System</title>
+  <meta name="description" content="State-of-the-art AI forensic deepfake detection powered by Sheng-Yu Wang CNNDetection, FaceForensics++ Xception Net, and Selim DFDC EfficientNet-B7.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/index.css">
+</head>
+<body>
+  <!-- Background Glow & Grid -->
+  <div class="bg-grid"></div>
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+
+  <!-- Header Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">TRUTHLOCK</span>
+          <span class="brand-subtitle">FORENSIC AI</span>
+        </div>
+      </div>
+
+      <div class="nav-stats" id="system-stats">
+        <div class="stat-pill">
+          <span class="status-dot active"></span>
+          <span class="stat-label">ENGINE:</span>
+          <span class="stat-val" id="backend-status">ONLINE (PyTorch/CPU)</span>
+        </div>
+        <div class="stat-pill model-pill">
+          <span class="stat-label">MODELS:</span>
+          <span class="stat-val highlight" id="active-model-name">Tri-Model Ensemble (DFDC + FF++ + Wang)</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Hero Introduction -->
+    <section class="hero-section">
+      <div class="hero-tag">MILITARY-GRADE SYNTHETIC MEDIA VERIFICATION</div>
+      <h1 class="hero-title">Deepfake & GAN Structural Forensic Detector</h1>
+      <p class="hero-desc">
+        Powered by three pre-trained neural networks: <strong>Sheng-Yu Wang's CNNDetection (Universal GAN Footprint)</strong>, <strong>Selim DFDC (Kaggle 1st Place EfficientNet-B7)</strong>, and <strong>FaceForensics++ (Xception Net)</strong> to expose generative artifacts, facial warping, and spectral lattice signatures.
+      </p>
+    </section>
+
+    <!-- Model Selection Bar -->
+    <section class="controls-panel">
+      <div class="control-group">
+        <label class="control-label" for="model-selector">Select Forensic Model Architecture:</label>
+        <div class="model-buttons" id="model-selector">
+          <button class="model-btn active" data-model="ensemble" id="btn-model-ensemble">
+            <span class="btn-icon">🛡️</span>
+            <div class="btn-info">
+              <span class="btn-name">Multi-Model Ensemble Fusion</span>
+              <span class="btn-sub">OpenCLIP + Wang CNNDetect + DFDC + Xception</span>
+            </div>
+            <span class="badge-rec">RECOMMENDED</span>
+          </button>
+
+          <button class="model-btn" data-model="clip_diffusion" id="btn-model-clip">
+            <span class="btn-icon">🌌</span>
+            <div class="btn-info">
+              <span class="btn-name">OpenCLIP ViT-L-14</span>
+              <span class="btn-sub">Midjourney & Stable Diffusion Detector</span>
+            </div>
+          </button>
+
+          <button class="model-btn" data-model="wang_cnndetect" id="btn-model-wang">
+            <span class="btn-icon">🔬</span>
+            <div class="btn-info">
+              <span class="btn-name">Wang CNNDetection</span>
+              <span class="btn-sub">ResNet-50 GAN Structural Footprint</span>
+            </div>
+          </button>
+
+          <button class="model-btn" data-model="selim_dfdc" id="btn-model-selim">
+            <span class="btn-icon">🧠</span>
+            <div class="btn-info">
+              <span class="btn-name">Selim DFDC Model</span>
+              <span class="btn-sub">EfficientNet-B7 NoisyStudent (254 MB)</span>
+            </div>
+          </button>
+
+          <button class="model-btn" data-model="faceforensics_xception" id="btn-model-xception">
+            <span class="btn-icon">⚡</span>
+            <div class="btn-info">
+              <span class="btn-name">FaceForensics++ Xception</span>
+              <span class="btn-sub">Depthwise Separable CNN (102 MB)</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace Layout -->
+    <div class="workspace-grid">
+      <!-- Left Column: Upload & Input Panel -->
+      <section class="card upload-card">
+        <div class="card-header">
+          <div class="header-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h2>Input Media</h2>
+          <span class="card-hint">Images (.jpg, .png, .webp) or Video (.mp4, .mov)</span>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div class="dropzone" id="drop-zone">
+          <input type="file" id="file-input" accept="image/*,video/*" hidden>
+          
+          <div class="dropzone-content" id="dropzone-prompt">
+            <div class="upload-icon-pulse">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+            </div>
+            <p class="dropzone-primary">Drag & drop image or video here</p>
+            <p class="dropzone-secondary">or <span class="browse-link">browse from your computer</span></p>
+            <div class="file-badges">
+              <span class="tag">JPEG</span>
+              <span class="tag">PNG</span>
+              <span class="tag">WEBP</span>
+              <span class="tag">MP4</span>
+            </div>
+          </div>
+
+          <!-- Active Preview -->
+          <div class="preview-container hidden" id="preview-container">
+            <div class="preview-media-box">
+              <img id="image-preview" class="media-preview" alt="Preview">
+              <video id="video-preview" class="media-preview hidden" controls></video>
+              <div class="scanner-laser hidden" id="scanner-laser"></div>
+            </div>
+            <div class="file-meta" id="file-meta">
+              <span class="file-name" id="file-name">filename.jpg</span>
+              <button class="remove-btn" id="btn-remove-file" title="Remove file">&times;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample Demonstration Buttons -->
+        <div class="preset-samples">
+          <span class="preset-label">Instant Test Samples:</span>
+          <div class="preset-btns">
+            <button class="sample-chip" id="sample-authentic" data-file="authentic_portrait.jpg">
+              <span class="chip-dot authentic"></span>
+              Authentic Portrait Sample
+            </button>
+            <button class="sample-chip" id="sample-fake" data-file="deepfake_synthetic_face.jpg">
+              <span class="chip-dot fake"></span>
+              Synthetic Deepfake Sample
+            </button>
+          </div>
+        </div>
+
+        <!-- Run Analysis CTA -->
+        <button class="action-btn" id="btn-analyze" disabled>
+          <span class="btn-spinner hidden" id="analyze-spinner"></span>
+          <span class="btn-text" id="analyze-btn-text">RUN FORENSIC SCAN</span>
+        </button>
+      </section>
+
+      <!-- Right Column: Forensic Results Dashboard -->
+      <section class="card results-card" id="results-card">
+        <div class="card-header">
+          <div class="header-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <h2>Forensic Analysis Dossier</h2>
+          <span class="status-badge waiting" id="result-status-badge">AWAITING INPUT</span>
+        </div>
+
+        <!-- Initial Placeholder State -->
+        <div class="empty-state" id="empty-state">
+          <div class="empty-radar">
+            <div class="radar-circle circle-1"></div>
+            <div class="radar-circle circle-2"></div>
+            <div class="radar-sweep"></div>
+          </div>
+          <p class="empty-title">Ready for Forensic Inspection</p>
+          <p class="empty-sub">Upload an image or video to evaluate universal GAN structural footprints, neural blending seams, and 2D FFT spectral lattices.</p>
+        </div>
+
+        <!-- Analysis Live Progress State -->
+        <div class="analyzing-state hidden" id="analyzing-state">
+          <div class="cyber-spinner"></div>
+          <h3 class="analyzing-title">Executing Multi-Layer Forensic Decomposition</h3>
+          <div class="pipeline-steps">
+            <div class="step-item active" id="step-1">
+              <span class="step-check">✓</span>
+              <span class="step-name">1. Evaluating Global GAN Structural Footprint (Wang ResNet-50)</span>
+            </div>
+            <div class="step-item active" id="step-2">
+              <span class="step-check">✓</span>
+              <span class="step-name">2. 2D FFT Frequency Domain Lattice Decomposition</span>
+            </div>
+            <div class="step-item active" id="step-3">
+              <span class="step-check">✓</span>
+              <span class="step-name">3. Facial ROI & Landmark Cropping (1.35x Margin)</span>
+            </div>
+            <div class="step-item active" id="step-4">
+              <span class="step-check">✓</span>
+              <span class="step-name">4. Deep Neural Classifier Consensus (DFDC / Xception)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Populated Results Dashboard -->
+        <div class="results-dashboard hidden" id="results-dashboard">
+          <!-- Top Verdict Banner -->
+          <div class="verdict-banner" id="verdict-banner">
+            <div class="verdict-left">
+              <span class="verdict-tag">DETECTION VERDICT</span>
+              <h3 class="verdict-title" id="verdict-text">VERIFIED AUTHENTIC</h3>
+              <p class="verdict-desc" id="verdict-desc">Neural artifact probability indicates no significant facial synthetic manipulation.</p>
+            </div>
+            <div class="verdict-score-ring">
+              <svg class="score-svg" viewBox="0 0 100 100">
+                <circle class="score-bg" cx="50" cy="50" r="42"/>
+                <circle class="score-fill" id="score-fill-circle" cx="50" cy="50" r="42"/>
+              </svg>
+              <div class="score-center">
+                <span class="score-val" id="score-percentage">98%</span>
+                <span class="score-lbl" id="score-type-lbl">AUTHENTIC</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Highlighted GAN Structural Footprint Banner -->
+          <div class="gan-footprint-card" id="gan-footprint-box">
+            <div class="gan-card-icon">🔬</div>
+            <div class="gan-card-info">
+              <div class="gan-card-top">
+                <span class="gan-card-label">Sheng-Yu Wang CNNDetection &bull; Structural Analysis</span>
+                <span class="gan-card-risk" id="gan-risk-badge">LOW GAN FOOTPRINT</span>
+              </div>
+              <div class="gan-card-score-row">
+                <span class="gan-score-title">GAN Synthetic Footprint Score:</span>
+                <span class="gan-score-number" id="metric-gan-footprint">8.4%</span>
+              </div>
+              <p class="gan-card-desc" id="gan-footprint-desc">Organic sensor noise and natural frequency decay. No dominant CNN architectural generator footprint detected.</p>
+            </div>
+          </div>
+
+          <!-- Highlighted OpenCLIP Diffusion & Midjourney Banner -->
+          <div class="diffusion-card" id="diffusion-box">
+            <div class="diffusion-card-icon">🌌</div>
+            <div class="diffusion-card-info">
+              <div class="diffusion-card-top">
+                <span class="diffusion-card-label">OpenCLIP ViT-L-14 &bull; Latent Diffusion Probe</span>
+                <span class="diffusion-card-risk" id="diffusion-risk-badge">ORGANIC CAPTURE</span>
+              </div>
+              <div class="diffusion-card-score-row">
+                <span class="diffusion-score-title">Midjourney / Stable Diffusion Probability:</span>
+                <span class="diffusion-score-number" id="metric-diffusion-prob">0.0%</span>
+              </div>
+              <p class="diffusion-card-desc" id="diffusion-desc">Visual embeddings reflect natural camera optics and photon distribution. No diffusion synthesis signature detected.</p>
+            </div>
+          </div>
+
+          <!-- Key Metrics Grid -->
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-lbl">Risk Level</span>
+              <span class="metric-val" id="metric-risk">LOW</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-lbl">Fake Probability</span>
+              <span class="metric-val" id="metric-fake-prob">2.4%</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-lbl">Faces Analyzed</span>
+              <span class="metric-val" id="metric-faces-count">1</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-lbl">Model Backbone</span>
+              <span class="metric-val" id="metric-model-used">Ensemble</span>
+            </div>
+          </div>
+
+          <!-- Annotated Visual Inspection Output -->
+          <div class="evidence-section">
+            <div class="evidence-header">
+              <span class="evidence-title">Visual Forensic Evidence (HUD Overlay)</span>
+              <span class="evidence-sub">Bounding boxes delineate individual face predictions</span>
+            </div>
+            <div class="annotated-image-box">
+              <img id="annotated-result-img" class="annotated-img" alt="Forensic Inspection Result">
+            </div>
+          </div>
+
+          <!-- Multi-Signal Decomposition Breakdown -->
+          <div class="signals-section">
+            <h4 class="section-heading">Multi-Domain Forensic Signals</h4>
+            <div class="signal-bars">
+              <div class="signal-row">
+                <div class="signal-header">
+                  <span class="signal-name">Diffusion Latent Signature (OpenCLIP ViT-L-14)</span>
+                  <span class="signal-val" id="sig-clip-diff">5%</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" id="bar-clip-diff" style="width: 5%"></div></div>
+              </div>
+
+              <div class="signal-row">
+                <div class="signal-header">
+                  <span class="signal-name">GAN Generator Lattice Signature (Wang ResNet-50)</span>
+                  <span class="signal-val" id="sig-gan-cnn">8%</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" id="bar-gan-cnn" style="width: 8%"></div></div>
+              </div>
+
+              <div class="signal-row">
+                <div class="signal-header">
+                  <span class="signal-name">Spectral Anomaly (2D FFT Lattice Spikes)</span>
+                  <span class="signal-val" id="sig-spectral">12%</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" id="bar-spectral" style="width: 12%"></div></div>
+              </div>
+
+              <div class="signal-row">
+                <div class="signal-header">
+                  <span class="signal-name">Spatial Discontinuity (Laplacian Edge Seam)</span>
+                  <span class="signal-val" id="sig-spatial">18%</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" id="bar-spatial" style="width: 18%"></div></div>
+              </div>
+
+              <div class="signal-row">
+                <div class="signal-header">
+                  <span class="signal-name">Chrominance Mismatch (YCrCb Skin Tone Divergence)</span>
+                  <span class="signal-val" id="sig-chroma">15%</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" id="bar-chroma" style="width: 15%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Timeline Section (Visible if media is video) -->
+          <div class="timeline-section hidden" id="timeline-section">
+            <h4 class="section-heading">Temporal Frame-by-Frame Manipulation Timeline</h4>
+            <div class="timeline-chart" id="timeline-chart"></div>
+          </div>
+
+          <!-- Action Footer: Export Report -->
+          <div class="results-footer">
+            <button class="export-btn" id="btn-export-json">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export JSON Audit Report
+            </button>
+            <button class="export-btn secondary" id="btn-new-scan">
+              Scan Another File
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Models Technical Reference Footer -->
+    <section class="models-reference-card card">
+      <div class="card-header">
+        <div class="header-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+        </div>
+        <h2>Pre-trained Deepfake & GAN Detection Models Status</h2>
+      </div>
+
+      <div class="models-grid" id="models-status-grid">
+        <div class="model-item-card">
+          <div class="model-item-header">
+            <span class="model-item-title">Sheng-Yu Wang CNNDetection</span>
+            <span class="model-status-chip online">ACTIVE</span>
+          </div>
+          <p class="model-item-desc">CVPR 2020 landmark architecture trained with blur and JPEG augmentations to detect universal CNN generator fingerprints across ProGAN, StyleGAN, BigGAN, and diffusion models.</p>
+          <div class="model-specs">
+            <span class="spec-tag">Weight: blur_jpg_prob0.5.pth</span>
+            <span class="spec-tag">Size: 269.4 MB</span>
+            <span class="spec-tag">Arch: ResNet-50</span>
+          </div>
+        </div>
+
+        <div class="model-item-card">
+          <div class="model-item-header">
+            <span class="model-item-title">Selim DFDC Model</span>
+            <span class="model-status-chip online">ACTIVE</span>
+          </div>
+          <p class="model-item-desc">Trained on the official Meta Deepfake Detection Challenge dataset. Achieved 1st place globally utilizing EfficientNet-B7 Noisy Student architecture with 66M parameters.</p>
+          <div class="model-specs">
+            <span class="spec-tag">Weight: final_111_..._b7_ns_0_36</span>
+            <span class="spec-tag">Size: 254.5 MB</span>
+            <span class="spec-tag">Arch: EfficientNet-B7</span>
+          </div>
+        </div>
+
+        <div class="model-item-card">
+          <div class="model-item-header">
+            <span class="model-item-title">FaceForensics++ Xception Net</span>
+            <span class="model-status-chip online">ACTIVE</span>
+          </div>
+          <p class="model-item-desc">Benchmark architecture for FaceForensics++ forensics. Employs 36 depthwise separable convolution layers organized in 14 residual modules with 20.8M parameters.</p>
+          <div class="model-specs">
+            <span class="spec-tag">Weight: best_xception.pth & base</span>
+            <span class="spec-tag">Size: 102.7 MB</span>
+            <span class="spec-tag">Arch: Xception CNN</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>TRUTHLOCK FORENSICS &bull; Neural Media Verification System &bull; Powered by PyTorch, FastAPI, OpenCV, and TIMM</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
